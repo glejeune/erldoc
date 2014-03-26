@@ -1,0 +1,15 @@
+<h2>Projects {{info}}</h2>
+<table class="projects-list">
+  {% for project in last_projects %}
+  <tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
+    <td class="project-title">
+      <a href="/{{ project.repo }}/{{ project.project }}">{{ project.repo }}/{{ project.project }}</a> <span class="project-date">({{ project.update_date }})</span>
+    </td>
+    <td class="project-infos">
+      <a href="javascript:info('/info/{{ project.repo }}/{{ project.project }}')"><i class="icon-info"></i></a>
+      <a href="{{ project.giturl }}"><i class="icon-github"></i></a>
+      <a href="/project/{{ project.repo }}/{{ project.project }}"><i class="icon-arrows-cw"></i></a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>

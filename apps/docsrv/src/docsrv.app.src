@@ -1,0 +1,12 @@
+{application, docsrv,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { docsrv_app, []}},
+  {env, []}
+ ]}.

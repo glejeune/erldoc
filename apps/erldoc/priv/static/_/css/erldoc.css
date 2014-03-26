@@ -1,0 +1,133 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #FFF;
+  font-family: "Lucida Grande", "Bitstream Vera Sans", "Verdana";
+  font-size: 13px;
+  color: #333;
+}
+
+h1 {
+  font-size: 28px;
+  color: #000;
+}
+
+a {
+  text-decoration: none;
+  color: #A00;
+}
+a:hover {
+  color: black;
+  text-decoration: none;
+}
+
+header {
+  margin: 10px 20px 10px 20px;
+}
+#title {
+  color: #A00;
+  font-size: 32px;
+  font-weight: bold;
+}
+#subtitle {
+  font-size: 16px;
+  color: #A55;
+}
+section {
+  padding: 0px 20px 20px 20px;
+}
+h2 {
+  border-bottom: 1px solid black;
+}
+
+table.projects-list {
+  border-collapse:collapse;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+}
+.project-title {
+  padding: 5px;
+  font-weight: bolder;
+}
+
+.project-date {
+  font-weight: normal;
+  font-size: 10px;
+}
+
+.project-infos {
+  padding: 5px;
+  text-align: right;
+}
+.odd {
+  background-color: #EEE;
+}
+.even {
+  background-color: #FFF;
+}
+table.projects-list td.project-infos a {
+  color: #000;
+}
+table.projects-list td.project-infos a:hover {
+  background-color: #000;
+  color: #FFF;
+  border-radius: 5px;
+}
+
+footer {
+  border-top: 1px solid #AAA;
+  padding: 0px 20px 20px 20px;
+  margin: 20px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  text-align: center;
+}
+.menu {
+  display:block;
+  height:25px;
+  margin-right: 20px;
+  position: absolute;
+  top: 0px;
+  right: 140px;
+  color: #fff;
+}
+.menu input {
+  border: 0;
+  background-color:#eee;
+}
+.menu a {
+  width: 100%;
+  color: #fff;
+  vertical-align: middle;
+}
+.menu-left {
+  display:block;
+  height:25px;
+  float: left;
+  padding: 10px;
+  background-color: #a00;
+  border-left: 1px solid #000;
+  border-bottom: 1px solid #000;
+  border-bottom-left-radius: 5px 5px;
+}
+.menu-center {
+  display:block;
+  height:25px;
+  float: left;
+  padding: 10px;
+  background-color: #a00;
+  border-left: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+.menu-right {
+  display:block;
+  height:25px;
+  float: left;
+  padding: 10px;
+  background-color: #a00;
+  border-left: 1px solid #000;
+  border-bottom: 1px solid #000;
+  border-bottom-right-radius: 5px 5px;
+}
+.box { width:200px; }

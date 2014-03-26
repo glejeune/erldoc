@@ -1,0 +1,8 @@
+<h2>{{ full_name }}</h2>
+<p>{{ description }}</p>
+<p>
+<a href="{{ html_url }}">{{ html_url }}</a>
+{% if homepage %}
+<br /><a href="{{ homepage }}">{{ homepage }}</a>
+{% endif %}
+</p>

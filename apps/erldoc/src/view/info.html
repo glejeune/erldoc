@@ -1,8 +1,11 @@
 <h2>{{ full_name }}</h2>
-<p>{{ description }}</p>
+<p><b>{{ description }}</b></p>
 <p>
-<a href="{{ html_url }}">{{ html_url }}</a>
-{% if homepage %}
-<br /><a href="{{ homepage }}">{{ homepage }}</a>
+<ul>
+  <li>Github: <a href="{{ html_url }}">{{ html_url }}</a></li>
+{% if homepage and homepage != "null" %}
+  <li>Homepage: <a href="{{ homepage }}">{{ homepage }}</a></li>
 {% endif %}
+  <li>Read the doc: <a href="/{{ full_name }}">{{ full_name }}</a></li>
+</ul>
 </p>

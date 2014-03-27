@@ -34,7 +34,6 @@ handle_cast({add, ProjectURL, ProjectDir, User, Project}, State) ->
                       paris_helpers:static(["_", "doc", Extra]), 
                       filename:join(ProjectDir, Extra))
                 end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
-              del_dir(CloneDir),
               case docdb:find(User, Project) of
                 {ok, []} -> docdb:add(User, Project, ProjectURL);
                 {ok, [P|_]} -> 
@@ -84,7 +83,9 @@ doc(Root, OutDir) ->
   process_flag(trap_exit, true),
   spawn_link(fun() -> edoc:files(Files, Opts) end),
   receive
-    {'EXIT', _, Status} -> Status;
+    {'EXIT', _, Status} ->
+      del_dir(Root),
+      Status;
     X -> X
   end.
 

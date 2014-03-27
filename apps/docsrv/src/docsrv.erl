@@ -27,26 +27,21 @@ handle_cast({add, ProjectURL, ProjectDir, User, Project}, State) ->
       lager:info("Clone ~p to ~p", [ProjectURL, CloneDir]),
       case git:clone(ProjectURL, CloneDir) of
         {ok, _} ->
-          case doc(CloneDir, ProjectDir) of
-            normal ->
-              lists:foreach(fun(Extra) ->
-                    file:copy(
-                      paris_helpers:static(["_", "doc", Extra]), 
-                      filename:join(ProjectDir, Extra))
-                end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
-              case docdb:find(User, Project) of
-                {ok, []} -> docdb:add(User, Project, ProjectURL);
-                {ok, [P|_]} -> 
-                  case lists:keyfind(id, 1, P) of
-                    {id, ID} -> docdb:update(ID);
-                    _ -> lager:info("DB Error incomplete data for ~p/~p : ~p", [User, Project, P])
-                  end;
-                _ -> lager:info("DB Error finding ~p/~p", [User, Project])
+          doc(CloneDir, ProjectDir),
+          del_dir(CloneDir),
+          lists:foreach(fun(Extra) ->
+                file:copy(
+                  paris_helpers:static(["_", "doc", Extra]), 
+                  filename:join(ProjectDir, Extra))
+            end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
+          case docdb:find(User, Project) of
+            {ok, []} -> docdb:add(User, Project, ProjectURL);
+            {ok, [P|_]} -> 
+              case lists:keyfind(id, 1, P) of
+                {id, ID} -> docdb:update(ID);
+                _ -> lager:info("DB Error incomplete data for ~p/~p : ~p", [User, Project, P])
               end;
-            _ -> 
-              lager:info("Error generating doc ~p", [ProjectDir]),
-              file:copy(paris_helpers:static(["_", "doc", "error.html"]), filename:join(ProjectDir, "index.html")),
-              file:copy(paris_helpers:static(["_", "doc", "_delete"]), filename:join(ProjectDir, ".delete"))
+            _ -> lager:info("DB Error finding ~p/~p", [User, Project])
           end;
         E ->
           lager:error("Error cloning repo ~p", [E]),
@@ -80,14 +75,16 @@ doc(Root, OutDir) ->
     [] -> [];
     [Overview|_] -> [{overview, Overview}]
   end,
-  process_flag(trap_exit, true),
-  spawn_link(fun() -> edoc:files(Files, Opts) end),
-  receive
-    {'EXIT', _, Status} ->
-      del_dir(Root),
-      Status;
-    X -> X
-  end.
+  edoc:files(Files, Opts).
+% @todo change to trap error
+%   process_flag(trap_exit, true),
+%   spawn_link(fun() -> edoc:files(Files, Opts) end),
+%   receive
+%     {'EXIT', _, Status} ->
+%       del_dir(Root),
+%       Status;
+%     X -> X
+%   end.
 
 tempdir() ->
   [TmpDir|_] = lists:dropwhile(fun(E) ->

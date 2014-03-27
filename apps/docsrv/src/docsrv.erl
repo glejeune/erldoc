@@ -27,19 +27,37 @@ handle_cast({add, ProjectURL, ProjectDir, User, Project}, State) ->
       lager:info("Clone ~p to ~p", [ProjectURL, CloneDir]),
       case git:clone(ProjectURL, CloneDir) of
         {ok, _} ->
-          doc(CloneDir, ProjectDir),
-          lists:foreach(fun(Extra) ->
-                file:copy(
-                  paris_helpers:static(["_", "doc", Extra]), 
-                  filename:join(ProjectDir, Extra))
-            end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
-          del_dir(CloneDir),
-          docdb:add(User, Project, ProjectURL);
+          case doc(CloneDir, ProjectDir) of
+            normal ->
+              lists:foreach(fun(Extra) ->
+                    file:copy(
+                      paris_helpers:static(["_", "doc", Extra]), 
+                      filename:join(ProjectDir, Extra))
+                end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
+              del_dir(CloneDir),
+              case docdb:find(User, Project) of
+                {ok, []} -> docdb:add(User, Project, ProjectURL);
+                {ok, [P|_]} -> 
+                  case lists:keyfind(id, 1, P) of
+                    {id, ID} -> docdb:update(ID);
+                    _ -> lager:info("DB Error incomplete data for ~p/~p : ~p", [User, Project, P])
+                  end;
+                _ -> lager:info("DB Error finding ~p/~p", [User, Project])
+              end;
+            _ -> 
+              lager:info("Error generating doc ~p", [ProjectDir]),
+              file:copy(paris_helpers:static(["_", "doc", "error.html"]), filename:join(ProjectDir, "index.html")),
+              file:copy(paris_helpers:static(["_", "doc", "_delete"]), filename:join(ProjectDir, ".delete"))
+          end;
         E ->
-          lager:error("Error ~p", [E])
+          lager:error("Error cloning repo ~p", [E]),
+          file:copy(paris_helpers:static(["_", "doc", "error.html"]), filename:join(ProjectDir, "index.html")),
+          file:copy(paris_helpers:static(["_", "doc", "_delete"]), filename:join(ProjectDir, ".delete"))
       end;
     _ -> 
-      lager:error("Can't create tempfile ~p for projetc ~p/~p", [CloneDir, User, Project])
+      lager:error("Can't create tempfile ~p for projetc ~p/~p", [CloneDir, User, Project]),
+      file:copy(paris_helpers:static(["_", "doc", "error.html"]), filename:join(ProjectDir, "index.html")),
+      file:copy(paris_helpers:static(["_", "doc", "_delete"]), filename:join(ProjectDir, ".delete"))
   end,
   {noreply, State};
 handle_cast(_Msg, State) ->
@@ -57,9 +75,18 @@ code_change(_OldVsn, State, _Extra) ->
 doc(Root, OutDir) ->
   Files = filelib:wildcard(filename:join([Root, "src", "**", "*.erl"])) ++
           filelib:wildcard(filename:join([Root, "apps", "*", "src", "**", "*.erl"])),
-  %        filelib:wildcard(filename:join([Root, "doc", "**", "*.edoc"])) ++
-  %        filelib:wildcard(filename:join([Root, "_doc", "**", "*.edoc"])),
-  edoc:files(Files, [{dir, OutDir}]).
+  Opts = [{dir, OutDir}] ++
+  case filelib:wildcard(filename:join([Root, "doc", "**", "overview.edoc"])) ++
+       filelib:wildcard(filename:join([Root, "_doc", "**", "overview.edoc"])) of
+    [] -> [];
+    [Overview|_] -> [{overview, Overview}]
+  end,
+  process_flag(trap_exit, true),
+  spawn_link(fun() -> edoc:files(Files, Opts) end),
+  receive
+    {'EXIT', _, Status} -> Status;
+    X -> X
+  end.
 
 tempdir() ->
   [TmpDir|_] = lists:dropwhile(fun(E) ->

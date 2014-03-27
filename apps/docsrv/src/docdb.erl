@@ -8,6 +8,7 @@
 
 -export([
     search/1,
+    find/2,
     last/0,
     last/1,
     add/3,
@@ -22,6 +23,9 @@ start_link() ->
 
 search(Project) ->
   gen_server:call(?SERVER, {search, Project}).
+
+find(User, Project) ->
+  gen_server:call(?SERVER, {find, User, Project}).
 
 last() -> last(10).
 last(N) ->
@@ -62,6 +66,11 @@ init(_Args) ->
 
 handle_call({search, Project}, _From, State) ->
   case pg_query(State, "select * from project where project like $1", ["%" ++ Project ++ "%"]) of
+    {ok, Columns, Results} ->  {reply, {ok, format_results(Columns, Results)}, State};
+    {error, #error{message = Message}} -> {reply, {error, binary_to_list(Message)}, State}
+  end;
+handle_call({find, User, Project}, _From, State) ->
+  case pg_query(State, "select * from project where repo=$1 and project=$2", [User, Project]) of
     {ok, Columns, Results} ->  {reply, {ok, format_results(Columns, Results)}, State};
     {error, #error{message = Message}} -> {reply, {error, binary_to_list(Message)}, State}
   end;

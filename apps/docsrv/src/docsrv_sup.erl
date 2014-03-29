@@ -23,5 +23,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, [?CHILD(docsrv, worker), ?CHILD(docdb, worker)]} }.
+    {ok, { {one_for_one, 5, 10}, [?CHILD(docdb, worker)]} }.
 

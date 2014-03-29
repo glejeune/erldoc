@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>erlDoc - Generating {{user}}/{{project}}</title>
+    <script type='text/javascript' charset='utf-8' src='/_/js/jquery.min.js'></script>
+    <link rel="stylesheet" href="/_/css/erldoc.css" />
+    <style>
+      .main {
+        color: #444;
+        position: absolute;
+        width: 600px;
+        text-align: center;
+        left: 50%;
+        top: 50%;
+        border: 1px solid #CCC;
+        -webkit-border-radius: 20px;
+        -moz-border-radius: 20px;
+        border-radius: 20px;
+        padding: 10px 0px 10px 20px;
+        transform: translate(-50%, -50%);    
+        -webkit-transform: translate(-50%, -50%);
+        -moz-transform: translate(-50%, -50%);
+        -ms-transform: translate(-50%, -50%);
+      }
+      .main p {
+        font-size: 18px;
+        padding: 20px;
+      }
+    </style>
+    <script>
+      var websocket;
+      $(document).ready(init);
+
+      function go(url) {
+        window.location.replace(url);
+      };
+
+      function init() {
+        if(!("WebSocket" in window)){
+          $('#status').append('<p><span style="color: red;">websockets are not supported </span></p>');
+        } else {
+          $('#status').html('Starting...');
+          connect();
+        };
+      };
+
+      function connect() {
+        wsHost = "ws://{{ host }}:{{ port }}/p"
+        websocket = new WebSocket(wsHost);
+        websocket.onopen = function(evt) { onOpen(evt) };
+        websocket.onclose = function(evt) { onClose(evt) };
+        websocket.onmessage = function(evt) { onMessage(evt) };
+        websocket.onerror = function(evt) { onError(evt) };
+      };
+
+      function onOpen(evt) {
+        var txt = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+          return v.toString(16);
+        });
+        websocket.send(txt + "/{{ user }}/{{ project }}");
+      };
+
+      function onClose(evt) {
+      };
+
+      function onMessage(evt) {
+        var resp = JSON.parse(evt.data);
+        $('#status').html(resp.message);
+        if(resp.status == "done") {
+          go('/{{ user }}/{{ project }}');
+        };
+      };
+
+      function onError(evt) {
+      };
+
+      function disconnect() {
+        websocket.close();
+      };
+    </script>
+  </head>
+  <body>
+    <header>
+      <span id="title">erlDoc.info</span> <span id="subtitle">Erlang Documentation Server</span>
+    </header>
+    <div class="main">
+      <p><b>{{user}}/{{project}}</b></p>
+
+      <p>
+      We are generating the documentation<br />
+      <span id="status"></span><br />
+      You will be redirected when it's done.
+      </p>
+
+      <p>
+      If you don't want to wait.<br />
+      You can go back to the <a href="javascript:go('/');">home page</a>.<br />
+      </p>
+    </div>
+  </body>
+</html>
+

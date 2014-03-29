@@ -46,7 +46,7 @@
       };
 
       function connect() {
-        wsHost = "ws://{{ host }}:{{ port }}/p"
+        wsHost = "ws://{{ host }}:{{ port }}/project"
         websocket = new WebSocket(wsHost);
         websocket.onopen = function(evt) { onOpen(evt) };
         websocket.onclose = function(evt) { onClose(evt) };

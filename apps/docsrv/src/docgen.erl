@@ -61,8 +61,8 @@ generate_loop(GenPID, Action, PubSubID, Parameters) ->
 doc_generator(CallerPID) ->
   receive
     {make_dirs, {User, Project}} ->
-      UserDir = paris_helpers:static(User),
-      ProjectDir = paris_helpers:static([User, Project]),
+      UserDir = paris:static(User),
+      ProjectDir = paris:static([User, Project]),
       _ = file:make_dir(UserDir),
       case file:make_dir(ProjectDir) of
         {error, Reason} when Reason =/= eexist -> 
@@ -93,7 +93,7 @@ doc_generator(CallerPID) ->
     {update_style, {User, Project, ProjectDir, CloneDir}} ->
       lists:foreach(fun(Extra) ->
             file:copy(
-              paris_helpers:static(["_", "doc", Extra]), 
+              paris:static(["_", "doc", Extra]), 
               filename:join(ProjectDir, Extra))
         end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
       CallerPID ! {update_style_ok, {User, Project, ProjectDir, CloneDir}},

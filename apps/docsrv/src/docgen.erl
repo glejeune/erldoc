@@ -44,7 +44,8 @@ generate_loop(GenPID, Action, PubSubID, Parameters) ->
           {status, done}
         ]),
       GenPID ! {clean, Parameters1};
-    {'EXIT', _, _Status} -> 
+    {'EXIT', _E, _Status} -> 
+      lager:info("_E = ~p", [_E]),
       gproc:send({p, l, PubSubID}, [
           {message, <<"Internal error">>},
           {status, error}
@@ -59,6 +60,10 @@ generate_loop(GenPID, Action, PubSubID, Parameters) ->
 % --
 
 doc_generator(CallerPID) ->
+  process_flag(trap_exit, true),
+  doc_generator_loop(CallerPID).
+
+doc_generator_loop(CallerPID) ->
   receive
     {make_dirs, {User, Project}} ->
       UserDir = paris:static(User),
@@ -69,7 +74,7 @@ doc_generator(CallerPID) ->
           CallerPID ! {error, <<"Can't create project directory">>};
         _ ->
           CallerPID ! {make_dirs_ok, {User, Project, ProjectDir}},
-          doc_generator(CallerPID)
+          doc_generator_loop(CallerPID)
       end;
     {clone, {User, Project, ProjectDir}} -> 
       CloneDir = tempdir(),
@@ -79,7 +84,7 @@ doc_generator(CallerPID) ->
           case git:clone(ProjectURL, CloneDir) of
             {ok, _} -> 
               CallerPID ! {clone_ok, {User, Project, ProjectDir, CloneDir}},
-              doc_generator(CallerPID);
+              doc_generator_loop(CallerPID);
             _ -> 
               CallerPID ! {error, <<"Can't clone project.">>}
           end;
@@ -89,7 +94,7 @@ doc_generator(CallerPID) ->
     {create_doc, {User, Project, ProjectDir, CloneDir}} ->
       build_doc(CloneDir, ProjectDir),
       CallerPID ! {create_doc_ok, {User, Project, ProjectDir, CloneDir}},
-      doc_generator(CallerPID);
+      doc_generator_loop(CallerPID);
     {update_style, {User, Project, ProjectDir, CloneDir}} ->
       lists:foreach(fun(Extra) ->
             file:copy(
@@ -97,20 +102,20 @@ doc_generator(CallerPID) ->
               filename:join(ProjectDir, Extra))
         end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
       CallerPID ! {update_style_ok, {User, Project, ProjectDir, CloneDir}},
-      doc_generator(CallerPID);
+      doc_generator_loop(CallerPID);
     {register, {User, Project, ProjectDir, CloneDir}} -> 
       ProjectURL = "https://github.com/" ++ User ++ "/" ++ Project,
       case docdb:find(User, Project) of
         {ok, []} -> 
           docdb:add(User, Project, ProjectURL),
           CallerPID ! {register_ok, {User, Project, ProjectDir, CloneDir}},
-          doc_generator(CallerPID);
+          doc_generator_loop(CallerPID);
         {ok, [P|_]} -> 
           case lists:keyfind(id, 1, P) of
             {id, ID} -> 
               docdb:update(ID),
               CallerPID ! {register_ok, {User, Project, ProjectDir, CloneDir}},
-              doc_generator(CallerPID);
+              doc_generator_loop(CallerPID);
             _ -> 
               CallerPID ! {error, <<"Can't update project in database.">>}
           end;
@@ -118,7 +123,9 @@ doc_generator(CallerPID) ->
           CallerPID ! {error, <<"Database error.">>}
       end;
     {clean, {_User, _Project, _ProjectDir, CloneDir}} ->
-      del_dir(CloneDir)
+      del_dir(CloneDir);
+    {'EXIT', Err, Status} ->
+      CallerPID ! {'EXIT', Err, Status}
   end.
 
 % - Private -

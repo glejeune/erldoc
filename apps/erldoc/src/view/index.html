@@ -33,8 +33,8 @@
           url = "/check/" + user + "/" + project;
           url_exist(url, function(status){
             if(status >= 400){
-              new Messi('Project <b>'+user+'/'+project+'</b> does not exist', 
-                {title: 'Invalid project', 
+              new Messi('Can\'t retrieve <b>'+user+'/'+project+'</b> informations', 
+                {title: 'Project error', 
                 titleClass: 'anim error', 
                 buttons: [{id: 0, label: 'Close', val: 'X'}]});
             } else {

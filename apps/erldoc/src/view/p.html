@@ -25,7 +25,7 @@
       }
       .main p {
         font-size: 18px;
-        padding: 20px;
+        padding: 10px;
       }
     </style>
     <script>
@@ -67,9 +67,14 @@
 
       function onMessage(evt) {
         var resp = JSON.parse(evt.data);
-        $('#status').html(resp.message);
-        if(resp.status == "done") {
-          go('/{{ user }}/{{ project }}');
+        if(resp.status == "error") {
+          $('#generate').html("We encountered a problem while generating the documentation. This is probably due to a bad formatting of the documentation in the sources of the project. You can try to generate the doc by yourself. If you do not encounter any problem, please <a href='https://github.com/glejeune/erldoc/issues'>report an issue</a>. If you can't generate the doc, please <a href='https://github.com/{{ user }}/{{ project }}/issues'>report an issue</a> to the author of the project.");
+          $('#back').html("We are sorry for the inconvenience.");
+        } else {
+          $('#status').html(resp.message);
+          if(resp.status == "done") {
+            go('/{{ user }}/{{ project }}');
+          };
         };
       };
 
@@ -88,14 +93,14 @@
     <div class="main">
       <p><b>{{user}}/{{project}}</b></p>
 
-      <p>
+      <p id="generate">
       We are generating the documentation<br />
       <span id="status"></span><br />
       You will be redirected when it's done.
       </p>
 
       <p>
-      If you don't want to wait.<br />
+      <span id="back">If you don't want to wait.</span><br />
       You can go back to the <a href="javascript:go('/');">home page</a>.<br />
       </p>
     </div>

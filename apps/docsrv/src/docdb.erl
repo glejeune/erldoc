@@ -12,7 +12,8 @@
     last/0,
     last/1,
     add/3,
-    update/1
+    update/1,
+    delete/1
   ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -36,6 +37,9 @@ add(Repo, Project, GitURL) ->
 
 update(ID) ->
   gen_server:call(?SERVER, {update, ID}).
+
+delete(ID) ->
+  gen_server:call(?SERVER, {delete, ID}).
 
 init(_Args) ->
   DBHost = case application:get_env(docsrv, db_host) of
@@ -86,6 +90,11 @@ handle_call({add, Repo, Project, GitURL}, _From, State) ->
   end;
 handle_call({update, ID}, _From, State) ->
   case pg_query(State, "update project set update_date=$1 where id=$2", [erlang:date(), ID]) of
+    {error, #error{message = Message}} -> {reply, {error, binary_to_list(Message)}, State};
+    OK -> {reply, OK, State}
+  end;
+handle_call({delete, ID}, _From, State) ->
+  case pg_query(State, "delete from project where id=$1", [ID]) of
     {error, #error{message = Message}} -> {reply, {error, binary_to_list(Message)}, State};
     OK -> {reply, OK, State}
   end;

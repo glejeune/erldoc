@@ -7,8 +7,7 @@
 
 generate(PubSubID, User, Project) ->
   gproc:reg({p, l, PubSubID}),
-  process_flag(trap_exit, true),
-  GenPID = spawn(docgen, doc_generator, [self()]),
+  GenPID = spawn(?MODULE, doc_generator, [self()]),
   generate_loop(GenPID, make_dirs, PubSubID, {User, Project}).
 
 generate_loop(GenPID, Action, PubSubID, Parameters) ->
@@ -16,67 +15,60 @@ generate_loop(GenPID, Action, PubSubID, Parameters) ->
   receive
     {make_dirs_ok, Parameters1} ->
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Directories created">>},
+          {message, <<"Cloning project...">>},
           {status, running}
         ]),
       generate_loop(GenPID, clone, PubSubID, Parameters1);
     {clone_ok, Parameters1} ->
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Project cloned">>},
+          {message, <<"Generating documentation...">>},
           {status, running}
         ]),
       generate_loop(GenPID, create_doc, PubSubID, Parameters1);
     {create_doc_ok, Parameters1} ->
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Documentation generated">>},
+          {message, <<"Updating style...">>},
           {status, running}
         ]),
       generate_loop(GenPID, update_style, PubSubID, Parameters1);
     {update_style_ok, Parameters1} ->
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Terminate doc creation">>},
+          {message, <<"Registering project...">>},
           {status, running}
         ]),
       generate_loop(GenPID, register, PubSubID, Parameters1);
     {register_ok, Parameters1} ->
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Project registered">>},
+          {message, <<"Cleaning...">>},
           {status, done}
         ]),
       GenPID ! {clean, Parameters1};
-    {'EXIT', _E, _Status} -> 
-      lager:info("_E = ~p", [_E]),
+    {error, Parameters1} -> 
       gproc:send({p, l, PubSubID}, [
-          {message, <<"Internal error">>},
           {status, error}
-        ]); 
-    {error, Err} -> 
-      gproc:send({p, l, PubSubID}, [
-          {error, Err},
-          {status, error}
-        ]) 
+        ]),
+      lager:debug("error, ~p", [Parameters1]),
+      GenPID ! {remove, Parameters1}
   end.
 
 % --
 
 doc_generator(CallerPID) ->
-  process_flag(trap_exit, true),
-  doc_generator_loop(CallerPID).
-
-doc_generator_loop(CallerPID) ->
   receive
     {make_dirs, {User, Project}} ->
+      lager:debug("make_dirs {~p, ~p}", [User, Project]),
       UserDir = paris:static(User),
       ProjectDir = paris:static([User, Project]),
       _ = file:make_dir(UserDir),
       case file:make_dir(ProjectDir) of
         {error, Reason} when Reason =/= eexist -> 
-          CallerPID ! {error, <<"Can't create project directory">>};
+          CallerPID ! {error, {User, Project}};
         _ ->
           CallerPID ! {make_dirs_ok, {User, Project, ProjectDir}},
-          doc_generator_loop(CallerPID)
+          doc_generator(CallerPID)
       end;
     {clone, {User, Project, ProjectDir}} -> 
+      lager:debug("clone {~p, ~p, ~p}", [User, Project, ProjectDir]),
       CloneDir = tempdir(),
       ProjectURL = "https://github.com/" ++ User ++ "/" ++ Project,
       case file:make_dir(CloneDir) of
@@ -84,48 +76,82 @@ doc_generator_loop(CallerPID) ->
           case git:clone(ProjectURL, CloneDir) of
             {ok, _} -> 
               CallerPID ! {clone_ok, {User, Project, ProjectDir, CloneDir}},
-              doc_generator_loop(CallerPID);
+              doc_generator(CallerPID);
             _ -> 
-              CallerPID ! {error, <<"Can't clone project.">>}
+              CallerPID ! {error, {User, Project, ProjectDir, CloneDir}},
+              doc_generator(CallerPID)
           end;
         _ ->
-          CallerPID ! {error, <<"Can't create temp directory.">>}
+          CallerPID ! {error, {User, Project, ProjectDir}},
+          doc_generator(CallerPID)
       end;
     {create_doc, {User, Project, ProjectDir, CloneDir}} ->
-      build_doc(CloneDir, ProjectDir),
-      CallerPID ! {create_doc_ok, {User, Project, ProjectDir, CloneDir}},
-      doc_generator_loop(CallerPID);
+      lager:debug("create_doc {~p, ~p, ~p, ~p}", [User, Project, ProjectDir, CloneDir]),
+      case build_doc(CloneDir, ProjectDir) of
+        ok ->
+          CallerPID ! {create_doc_ok, {User, Project, ProjectDir, CloneDir}},
+          doc_generator(CallerPID);
+        error ->
+          CallerPID ! {error, {User, Project, ProjectDir, CloneDir}},
+          doc_generator(CallerPID)
+      end;
     {update_style, {User, Project, ProjectDir, CloneDir}} ->
+      lager:debug("update_style {~p, ~p, ~p, ~p}", [User, Project, ProjectDir, CloneDir]),
       lists:foreach(fun(Extra) ->
             file:copy(
               paris:static(["_", "doc", Extra]), 
               filename:join(ProjectDir, Extra))
         end, ["stylesheet.css", "erldoc_header.html", "index.html"]),
       CallerPID ! {update_style_ok, {User, Project, ProjectDir, CloneDir}},
-      doc_generator_loop(CallerPID);
+      doc_generator(CallerPID);
     {register, {User, Project, ProjectDir, CloneDir}} -> 
+      lager:debug("register {~p, ~p, ~p, ~p}", [User, Project, ProjectDir, CloneDir]),
       ProjectURL = "https://github.com/" ++ User ++ "/" ++ Project,
       case docdb:find(User, Project) of
         {ok, []} -> 
           docdb:add(User, Project, ProjectURL),
           CallerPID ! {register_ok, {User, Project, ProjectDir, CloneDir}},
-          doc_generator_loop(CallerPID);
+          doc_generator(CallerPID);
         {ok, [P|_]} -> 
           case lists:keyfind(id, 1, P) of
             {id, ID} -> 
               docdb:update(ID),
               CallerPID ! {register_ok, {User, Project, ProjectDir, CloneDir}},
-              doc_generator_loop(CallerPID);
+              doc_generator(CallerPID);
             _ -> 
-              CallerPID ! {error, <<"Can't update project in database.">>}
+              CallerPID ! {error, {User, Project, ProjectDir, CloneDir}},
+              doc_generator(CallerPID)
           end;
         _ -> 
-          CallerPID ! {error, <<"Database error.">>}
+          CallerPID ! {error, {User, Project, ProjectDir, CloneDir}},
+          doc_generator(CallerPID)
       end;
-    {clean, {_User, _Project, _ProjectDir, CloneDir}} ->
+    {clean, {User, Project, ProjectDir, CloneDir}} ->
+      lager:debug("clean {~p, ~p, ~p, ~p}", [User, Project, ProjectDir, CloneDir]),
       del_dir(CloneDir);
-    {'EXIT', Err, Status} ->
-      CallerPID ! {'EXIT', Err, Status}
+    {remove, {User, Project}} ->
+      lager:debug("remove {~p, ~p}", [User, Project]),
+      ok;
+    {remove, {User, Project, ProjectDir}} ->
+      lager:debug("remove {~p, ~p, ~p}", [User, Project, ProjectDir]),
+      case docdb:find(User, Project) of
+        {ok, []} -> 
+          del_dir(ProjectDir);
+        {ok, [_|_]} -> 
+          ok
+      end;
+    {remove, {User, Project, ProjectDir, CloneDir}} ->
+      lager:debug("remove {~p, ~p, ~p, ~p}", [User, Project, ProjectDir, CloneDir]),
+      del_dir(ProjectDir),
+      del_dir(CloneDir),
+      case docdb:find(User, Project) of
+        {ok, []} -> ok;
+        {ok, [P|_]} -> 
+          case lists:keyfind(id, 1, P) of
+            {id, ID} -> docdb:delete(ID);
+            _ -> ok
+          end
+      end
   end.
 
 % - Private -
@@ -143,6 +169,7 @@ tempdir() ->
   filename:join(TmpDir, lists:flatten(io_lib:format("~p-~p.~p.~p",[N,A,B,C]))).
 
 build_doc(Root, OutDir) ->
+  process_flag(trap_exit, true),
   Files = filelib:wildcard(filename:join([Root, "src", "**", "*.erl"])) ++
           filelib:wildcard(filename:join([Root, "apps", "*", "src", "**", "*.erl"])),
   Opts = [{dir, OutDir}] ++
@@ -151,7 +178,21 @@ build_doc(Root, OutDir) ->
     [] -> [];
     [Overview|_] -> [{overview, Overview}]
   end,
-  edoc:files(Files, Opts).
+  NBFiles = length(Files) + length(Opts),
+  lager:info("~p files.... ~p, ~p ", [NBFiles, Files, Opts]),
+  if
+    NBFiles =< 1 -> error;
+    true ->
+      spawn_link(edoc, files, [Files, Opts]),
+      receive
+        {'EXIT', _, error} -> 
+          lager:debug("build_doc error"),
+          error;
+        R -> 
+          lager:debug("build_doc ok (~p)", [R]),
+          ok
+      end
+  end.
 
 del_dir(Dir) ->
   lists:foreach(fun(D) ->

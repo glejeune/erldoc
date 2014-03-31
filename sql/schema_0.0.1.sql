@@ -3,7 +3,6 @@ CREATE TABLE project (
   repo varchar(256) not null,
   project varchar(256) not null,
   giturl varchar(1024) not null unique,
-  language varchar(256) not null default 'erlang',
   creation_date date not null default CURRENT_DATE,
   update_date date not null default CURRENT_DATE
 );

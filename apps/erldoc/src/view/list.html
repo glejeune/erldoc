@@ -3,7 +3,7 @@
   {% for project in last_projects %}
   <tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}">
     <td class="project-title">
-      <a href="/{{ project.repo }}/{{ project.project }}">{{ project.repo }}/{{ project.project }}</a> <span class="project-date">({{ project.update_date }})</span>
+      <img src="/_/img/{{ project.language }}-icon.png" alt="{{ project.language }}" />&nbsp;<a href="/{{ project.repo }}/{{ project.project }}">{{ project.repo }}/{{ project.project }}</a> <span class="project-date"> ({{ project.update_date }})</span>
     </td>
     <td class="project-infos">
       <a href="javascript:info('/info/{{ project.repo }}/{{ project.project }}')"><i class="icon-info"></i></a>

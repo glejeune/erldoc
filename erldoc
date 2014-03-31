@@ -51,7 +51,7 @@ start_app() {
   if [ $STARTED = true ] ; then
      echo "$NAME is already running (PID $PID)"
    else
-     erl +pc unicode -pa $PWD/ebin $PWD/apps/*/ebin $PWD/deps/*/ebin $NOSHELL -config $PWD/config/$NAME.config -s $NAME
+     erl +pc unicode -pa $PWD/ebin $PWD/apps/*/ebin $PWD/deps/*/ebin $PWD/deps/elixir/lib/*/ebin $NOSHELL -config $PWD/config/$NAME.config -s $NAME
    fi
 }
 

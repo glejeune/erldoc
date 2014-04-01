@@ -168,7 +168,15 @@ tempdir() ->
   N=node(),
   filename:join(TmpDir, lists:flatten(io_lib:format("~p-~p.~p.~p",[N,A,B,C]))).
 
+build_ex_doc(_Root, _OutDir) ->
+  % 'Elixir.Mix'.start().
+  % 'Elixir.Code':load_file(<<"deps/ex_doc/mix.exs">>).
+  % 'Elixir.Mix':project(). % -> [{app, ex_doc}, {version,<<"0.1.0">>}, ...]
+  % 'Elixir.ExDoc':generate_docs(<<"ex_doc">>, <<"0.1.0">>, [{source_root, <<"deps/ex_docs">>}, {output, <<"__exdocs_test">>}, {source_beam, <<"deps/ex_doc/_build/dev/lib/ex_doc/ebin">>}]).
+  ok.
+
 build_doc(Root, OutDir) ->
+  % @TODO add hrl files
   process_flag(trap_exit, true),
   Files = filelib:wildcard(filename:join([Root, "src", "**", "*.erl"])) ++
           filelib:wildcard(filename:join([Root, "apps", "*", "src", "**", "*.erl"])),

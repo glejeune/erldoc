@@ -1,0 +1,6 @@
++pc unicode
+
+# add elixir support
+-pa $PWD/deps/elixir/lib/*/ebin 
+# add ex_doc support
+-pa $PWD/deps/ex_doc/_build/dev/lib/ex_doc/ebin

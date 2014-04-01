@@ -10,5 +10,6 @@ start() ->
   ok = application:start(gproc),
   ok = application:start(mimetypes),
   ok = application:start(elixir),
+  ok = application:start(ex_doc),
   ok = application:start(docsrv),
   ok = application:start(erldoc).
